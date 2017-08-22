@@ -2,9 +2,9 @@
   "name": "active-keys",
   "version": "0.0.1",
   "description": "Know and listen for which keys the user is currently holding down.",
-  "main": "index.js",
+  "main": "dist/",
   "scripts": {
-    "build": "babel index.js --presets babel-preset-es2015,babel-preset-stage-2 --out-dir dist",
+    "build": "babel ./src --presets babel-preset-es2015,babel-preset-stage-2 --out-dir dist",
     "prepublishOnly": "npm run build",
     "preversion": "git diff-index --quiet HEAD --"
   },
@@ -14,5 +14,8 @@
     "babel-cli": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1"
+  },
+  "dependencies": {
+    "event-target-shim": "^2.0.0"
   }
 }
