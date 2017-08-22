@@ -8,25 +8,31 @@ class KeyWatcher extends EventTargetShim {
     constructor() {
         super();
 
-        window.addEventListener('keyup', evt => {
-            this.activeKeys[evt.key] = this.activeKeys[evt.key] || 0;
-            const bitwiseInverse = ~(1 << evt.location);
-            this.activeKeys[evt.key] &= bitwiseInverse;
-            if (!this.activeKeys[evt.key]) {
-                delete this.activeKeys[evt.key];
-            }
-            // console.log(evt.location, evt.key, bitwiseInverse, this.activeKeys);
+        const activeKeys = this.activeKeys;
 
+        window.addEventListener('keyup', evt => {
+            if (!activeKeys[evt.key]) return;
+
+            const bitwiseInverse = ~(1 << evt.location);
+
+            activeKeys[evt.key] &= bitwiseInverse;
+            if (!activeKeys[evt.key]) {
+                delete activeKeys[evt.key];
+            }
+
+            // console.log(evt.location, evt.key, bitwiseInverse, activeKeys);
             this._dispatch();
         });
 
         window.addEventListener('keydown', evt => {
-            this.activeKeys[evt.key] = this.activeKeys[evt.key] || 0;
+            activeKeys[evt.key] = activeKeys[evt.key] || 0;
             const bitwise = 1 << evt.location;
-            if (this.activeKeys[evt.key] & bitwise) return;
-            this.activeKeys[evt.key] |= bitwise;
-            // console.log(evt.location, evt.key, bitwise, this.activeKeys);
 
+            if (activeKeys[evt.key] & bitwise) return;
+
+            activeKeys[evt.key] |= bitwise;
+
+            // console.log(evt.location, evt.key, bitwise, activeKeys);
             this._dispatch();
         });
     }

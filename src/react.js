@@ -10,7 +10,6 @@ export default (Target) => {
             this.state.activeKeys = {...keyWatcher.activeKeys};
 
             this._handleKeyWatcherChange = () => {
-                console.log(keyWatcher.activeKeys);
                 this.setState({activeKeys: {...keyWatcher.activeKeys}});
             };
         }
