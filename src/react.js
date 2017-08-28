@@ -1,31 +1,47 @@
+/**
+ * React helper module for active-keys.
+ * Adds `.activeKeys` to `state`. Can also be used as a decorator.
+ * @module react
+ * @example
+ * import keyWatcher from 'active-keys/dist/react';
+ * class MyComponent extends Component {
+ *   componentWillUpdate(nextProps, nextState) {
+ *     console.log(nextState.activeKeys);
+ *   }
+ * }
+ * keyWatcher(MyComponent);
+ */
 
 import keyWatcher from './';
 
 export default (Target) => {
-    return class extends Target {
-        constructor() {
-            super(...arguments);
+  // While React is usually about composition and HOCs, inheritance is pretty simple here
+  // (and keeps the dependency size low for non-React users).
+  return class extends Target {
+    constructor() {
+      super(...arguments);
 
-            this.state = this.state || {};
-            this.state.activeKeys = {...keyWatcher.activeKeys};
+      this.state = this.state || {};
+      this.state.activeKeys = {...keyWatcher.activeKeys};
 
-            this._handleKeyWatcherChange = () => {
-                this.setState({activeKeys: {...keyWatcher.activeKeys}});
-            };
-        }
+      this._handleKeyWatcherChange = () => {
+        this.setState({activeKeys: {...keyWatcher.activeKeys}});
+      };
+    }
 
-        componentWillMount() {
-            keyWatcher.removeEventListener('change', this._handleKeyWatcherChange);
+    componentWillMount() {
+      keyWatcher.addEventListener('change', this._handleKeyWatcherChange);
 
-            const superFcn = super.componentWillMount;
-            return !superFcn ? undefined : superFcn.apply(this, arguments);
-        }
+      const superFcn = super.componentWillUnmount;
+      return !superFcn ? undefined : superFcn.apply(this, arguments);
+    }
 
-        componentWillMount() {
-            keyWatcher.addEventListener('change', this._handleKeyWatcherChange);
+    componentWillUnmount() {
+      keyWatcher.removeEventListener('change', this._handleKeyWatcherChange);
 
-            const superFcn = super.componentWillUnmount;
-            return !superFcn ? undefined : superFcn.apply(this, arguments);
-        }
-    };
+      const superFcn = super.componentWillUnmount;
+      return !superFcn ? undefined : superFcn.apply(this, arguments);
+    }
+
+  };
 };
