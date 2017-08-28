@@ -6,20 +6,33 @@
   "scripts": {
     "build": "npm run build:docs && npm run build:code",
     "build:docs": "documentation build src/** -f md -o docs.md",
-    "build:code": "babel ./src --presets babel-preset-es2015,babel-preset-stage-2 --out-dir dist",
+    "build:code": "babel ./src --out-dir dist --ignore '**/*.test.js'",
     "prepublishOnly": "npm run build",
     "preversion": "git diff-index --quiet HEAD --",
-    "test": "eslint src"
+    "test": "npm run test:watch -- --single-run",
+    "test:watch": "karma start karma.conf.js",
+    "-test": "npm run build && mocha --compilers js:babel-core/register 'src/**/*.test.js'"
   },
   "author": "chris@dremio.com",
   "license": "Apache-2.0",
   "devDependencies": {
     "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
     "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.1.2",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
+    "chai": "^4.1.1",
     "documentation": "^5.2.2",
-    "eslint": "^4.5.0"
+    "eslint": "^4.5.0",
+    "karma": "^1.7.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-mocha": "^1.3.0",
+    "karma-webpack": "^2.0.4",
+    "mocha": "^3.5.0",
+    "sinon": "^3.2.1",
+    "webpack": "^3.5.5"
   },
   "dependencies": {
     "event-target-shim": "^2.0.0"
