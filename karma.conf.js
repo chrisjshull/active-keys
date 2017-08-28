@@ -83,8 +83,12 @@ module.exports = function(config) {
     coverageReporter: {
       reporters: [
         {type: 'text'},
-        { type: 'html'}
+        {type: 'html'}
       ]
+    },
+
+    eslint: {
+      stopOnError: false
     }
   });
 };

@@ -102,14 +102,18 @@
       "message": "Please use object spread {...} instead."
     }],
     "no-restricted-globals": ["error", "encodeURI"], // if you think you want this, you probably want encodeURIComponent instead
-    "keyword-spacing": ["error", { "before": true, "after": true }]
+    "keyword-spacing": ["error", { "before": true, "after": true }],
+    "no-underscore-dangle": ["error", { "allowAfterThis": true }]
   },
 
   "overrides": [
     {
       "files": [ "**/*.test.js" ],
       "env": { "mocha": true },
-      "globals": {"sinon": true, "expect": true}
+      "globals": {"sinon": true, "expect": true},
+      "rules": {
+        "no-underscore-dangle": "off"
+      }
     },
     {
       "files": [ "*.js" ],

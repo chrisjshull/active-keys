@@ -9,7 +9,7 @@
  *     console.log(nextState.activeKeys);
  *   }
  * }
- * keyWatcher(MyComponent);
+ * MyComponent = keyWatcher(MyComponent);
  */
 
 import keyWatcher from './';
@@ -32,7 +32,7 @@ export default (Target) => {
     componentWillMount() {
       keyWatcher.addEventListener('change', this._handleKeyWatcherChange);
 
-      const superFcn = super.componentWillUnmount;
+      const superFcn = super.componentWillMount;
       return !superFcn ? undefined : superFcn.apply(this, arguments);
     }
 

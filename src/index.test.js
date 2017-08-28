@@ -1,6 +1,5 @@
+
 import {KeyWatcher} from './';
-
-
 
 describe('KeyWatcher', () => {
   let subject;
@@ -46,8 +45,12 @@ describe('KeyWatcher', () => {
     });
   });
 
-  it('same key, different locations', () => {
+  it('same key, various locations', () => {
     subject.handleEvent({type: 'keydown', key: 'Alt', location: 0});
+    expect(changeListener.callCount).to.be.equal(1);
+    expect(subject.activeKeys.Alt).to.be.ok;
+
+    subject.handleEvent({type: 'keydown', key: 'Alt', location: 0}); // same again
     expect(changeListener.callCount).to.be.equal(1);
     expect(subject.activeKeys.Alt).to.be.ok;
 
@@ -69,4 +72,7 @@ describe('KeyWatcher', () => {
     expect(subject.activeKeys.Alt).to.not.be.ok;
   });
 
+  it('unknown event', () => {
+    subject.handleEvent({type: 'foo'});
+  });
 });
