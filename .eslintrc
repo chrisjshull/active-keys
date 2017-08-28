@@ -103,5 +103,17 @@
     }],
     "no-restricted-globals": ["error", "encodeURI"], // if you think you want this, you probably want encodeURIComponent instead
     "keyword-spacing": ["error", { "before": true, "after": true }]
-  }
+  },
+
+  "overrides": [
+    {
+      "files": [ "**/*.test.js" ],
+      "env": { "mocha": true },
+      "globals": {"sinon": true, "expect": true}
+    },
+    {
+      "files": [ "*.js" ],
+      "env": { "node": true }
+    }
+  ]
 }
