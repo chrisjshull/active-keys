@@ -5,10 +5,10 @@
   "main": "dist/",
   "scripts": {
     "build": "npm run build:docs && npm run build:code",
-    "build:docs": "documentation build src/** -f md -o docs.md",
+    "build:docs": "documentation build 'src/**' -f md -o docs.md",
     "build:code": "babel ./src --out-dir dist --ignore '**/*.test.js'",
     "prepublishOnly": "npm run build",
-    "preversion": "git diff-index --quiet HEAD --",
+    "preversion": "npm run build && git diff-index --ignore-space-at-eol --quiet HEAD --",
     "test": "npm run test:watch -- --single-run",
     "test:watch": "cross-env NODE_ENV=test karma start karma.conf.js",
     "lint": "eslint src"
