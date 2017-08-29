@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {KeyWatcher} from './';
+import singletonInstance, {KeyWatcher} from './';
 
 describe('KeyWatcher', () => {
   let subject;
@@ -29,6 +29,10 @@ describe('KeyWatcher', () => {
     subject._destroy();
     window.addEventListener.restore();
     window.removeEventListener.restore();
+  });
+
+  it('singleton', () => {
+    expect(singletonInstance).to.be.an.instanceof(KeyWatcher);
   });
 
   it('constructor', () => {

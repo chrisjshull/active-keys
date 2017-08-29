@@ -61,5 +61,5 @@ class MyComponent extends Component {
     console.log(nextState.activeKeys);
   }
 }
-keyWatcher(MyComponent);
+MyComponent = keyWatcher(MyComponent);
 ```
