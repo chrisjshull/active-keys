@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>active-keys – Live Example</title>
+  <script defer src="../dist/browser.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var ele = document.getElementById('keys');
+      var setContent = function() {
+        ele.textContent = '[ ' + Object.keys(KeyWatcher.default.activeKeys).join(', ') + ' ]';
+      };
+      KeyWatcher.default.addEventListener('change', setContent);
+      setContent();
+    });
+  </script>
+</head>
+<body>
+
+<h1>active-keys – Live Example</h1>
+
+<b>Actively held down keyboard keys:</b>
+<pre id="keys"></pre>
+
+<a href="api.md">API Docs and Example Code</a>
+
+</body>
+</html>

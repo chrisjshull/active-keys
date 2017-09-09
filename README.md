@@ -1,3 +1,5 @@
+TODO: update repo description and URL, get pages turned on. index for pages?
+
 # active-keys
 
 Know and listen for which keys the user is currently holding down using standard [KeyboardEvent#key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key) values.
@@ -8,4 +10,5 @@ Know and listen for which keys the user is currently holding down using standard
 - Includes React helper.
 - Requires support for [KeyboardEvent#key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key). 
 
-[API Docs and Example Code](docs.md)
+[Live Example](docs/index.html)
+[API Docs and Example Code](docs/api.md)
