@@ -43,7 +43,7 @@ describe('KeyWatcher', () => {
   describe('key down', () => {
     it('basic', () => {
       subject.handleEvent({type: 'keydown', key: 'Alt'});
-      expect(changeListener.calledOnce).to.be.true;
+      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys.Alt).to.be.ok;
     });
   });
@@ -53,13 +53,13 @@ describe('KeyWatcher', () => {
       subject.handleEvent({type: 'keydown', key: 'Alt'});
       changeListener.reset();
       subject.handleEvent({type: 'keyup', key: 'Alt'});
-      expect(changeListener.calledOnce).to.be.true;
+      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys.Alt).to.not.be.ok;
     });
 
     it('missing keydown', () => {
       subject.handleEvent({type: 'keyup', key: 'Alt'});
-      expect(changeListener.calledOnce).to.be.false;
+      expect(changeListener.callCount).to.be.equal(0);
       expect(subject.activeKeys.Alt).to.not.be.ok;
     });
   });
@@ -94,4 +94,59 @@ describe('KeyWatcher', () => {
   it('unknown event', () => {
     subject.handleEvent({type: 'foo'});
   });
+
+  describe('safety resets', () => {
+    //... blur, mod sequences
+
+    it('blur', () => {
+      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'blur'});
+      expect(changeListener.callCount).to.be.equal(2);
+      expect(subject.activeKeys).to.be.eql({});
+    });
+
+    it('respected modifiers', () => {
+      subject.handleEvent({type: 'keydown', key: 'ArrowDown'});
+      subject.handleEvent({type: 'keydown', key: 'e'});
+      changeListener.reset();
+      subject.handleEvent({type: 'keydown', key: 'Shift'});
+      subject.handleEvent({type: 'keydown', key: 'E'}); // auto-done (in Chrome/Mac)
+      expect(changeListener.callCount).to.be.equal(2);
+      expect(subject.activeKeys).to.be.eql({ArrowDown: 1, Shift: 1, E: 1});
+
+      changeListener.reset();
+      subject.handleEvent({type: 'keyup', key: 'Shift'});
+      subject.handleEvent({type: 'keydown', key: 'e'}); // auto-done (in Chrome/Mac)
+      expect(changeListener.callCount).to.be.equal(2);
+      expect(subject.activeKeys).to.be.eql({ArrowDown: 1, e: 1});
+    });
+
+    it('Dead', () => {
+      subject.handleEvent({type: 'keydown', key: 'e'});
+      changeListener.reset();
+      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
+      expect(changeListener.callCount).to.be.equal(2);
+      expect(subject.activeKeys).to.be.eql({Alt: 1});
+      // up e: no keyup e fired upon release
+      changeListener.reset();
+      subject.handleEvent({type: 'keyup', key: 'Alt'});
+      subject.handleEvent({type: 'keyup', key: 'Dead'}); // auto-done (in Chrome/Mac)
+      expect(changeListener.callCount).to.be.equal(1);
+      expect(subject.activeKeys).to.be.eql({});
+
+      subject.handleEvent({type: 'keydown', key: 'e'});
+      changeListener.reset();
+      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
+      expect(changeListener.callCount).to.be.equal(2);
+      expect(subject.activeKeys).to.be.eql({Alt: 1});
+      changeListener.reset();
+      subject.handleEvent({type: 'keyup', key: 'Alt'});
+      subject.handleEvent({type: 'keyup', key: 'e'});
+      expect(changeListener.callCount).to.be.equal(1);
+      expect(subject.activeKeys).to.be.eql({});
+    });
+  });
 });
+

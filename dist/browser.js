@@ -55,17 +55,16 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * Tracks which keys are currently held down.
- * @fires 'change'
  */
 var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
   _inherits(KeyWatcher, _EventTargetShim);
 
   /**
-   * @method addEventListener
+   * @method module:index.KeyWatcher#addEventListener
    * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener
    */
   /**
-   * @method removeEventListener
+   * @method module:index.KeyWatcher#removeEventListener
    * @see https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener
    */
 
@@ -79,13 +78,15 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
 
     window.addEventListener('keydown', _this);
     window.addEventListener('keyup', _this);
+    window.addEventListener('blur', _this);
     return _this;
   }
 
   /**
    * Object of which keyboard keys are currently held down.
-   * Object keys are values of [KeyboardEvent#key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values).
+   * Object keys are {@link https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values|KeyboardEvent#key}.
    * Object values should be treated as truthy/falsy only.
+   * @fires {@link module:index.KeyWatcher#change|change} when updated.
    */
 
 
@@ -94,7 +95,13 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
     value: function _destroy() {
       window.removeEventListener('keydown', this);
       window.removeEventListener('keyup', this);
+      window.removeEventListener('blur', this);
     }
+
+    /**
+     * @private
+     */
+
   }, {
     key: 'handleEvent',
     value: function handleEvent(evt) {
@@ -106,6 +113,9 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
     value: function _handleKeydown(_ref) {
       var key = _ref.key,
           location = _ref.location;
+
+      key = this._handleModifiers(key);
+      if (!key) return;
 
       var wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
       var bitwise = 1 << location;
@@ -125,6 +135,9 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       var key = _ref2.key,
           location = _ref2.location;
 
+      key = this._handleModifiers(key);
+      if (!key) return;
+
       if (!this.activeKeys[key]) return;
 
       var bitwiseInverse = ~(1 << location);
@@ -137,11 +150,99 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       // console.log(location, evt.key, bitwiseInverse, this.activeKeys);
     }
   }, {
+    key: '_handleBlur',
+    value: function _handleBlur() {
+      // once the window/tab/frame loses focus we won't get keyup events
+      // so err on the side of a full reset
+      this._removeAll();
+    }
+  }, {
+    key: '_removeAll',
+    value: function _removeAll() {
+      // maintain the object reference
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = Object.keys(this.activeKeys)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var activeKey = _step.value;
+
+          delete this.activeKeys[activeKey];
+        }
+
+        //this._dispatch();
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+    }
+  }, {
+    key: '_handleModifiers',
+    value: function _handleModifiers(key) {
+      // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
+      // so will err on the side of resetting all unnamed keys
+      // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+      if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
+        // a similar situation can happen when a Dead key is hit.
+        // e.g. on a US Mac keyboard;
+        // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
+        // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+        if (key !== 'Dead') {
+          return key;
+        }
+      }
+
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = Object.keys(this.activeKeys)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var activeKey = _step2.value;
+
+          if (activeKey.match(/^[A-Z][a-zA-Z0-9]+$/)) continue; // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
+          delete this.activeKeys[activeKey];
+        }
+
+        // The Dead key can also get stuck, and it's not a real key, so just ignore it.
+        // e.g. on a US Mac keyboard;
+        // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+
+      if (key === 'Dead') return null;
+
+      return key;
+    }
+  }, {
     key: '_dispatch',
     value: function _dispatch() {
       /**
-       * Event fired when #activeKeys changes.
-       * @event change
+       * Event fired when {@link module:index.KeyWatcher#activeKeys|activeKeys} changes.
+       * @event module:index.KeyWatcher#change
        */
       var event = new Event('change', {
         bubbles: false,

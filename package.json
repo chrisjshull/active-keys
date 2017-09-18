@@ -5,7 +5,7 @@
   "main": "dist/",
   "scripts": {
     "build": "npm run build:docs && npm run build:babel && npm run build:browser",
-    "build:docs": "documentation build 'src/**' -f md -o docs/api.md",
+    "build:docs": "grep -v 'docs/api/' /Users/chris/active-keys/README.md | sed 's/[(]docs\\//(..\\//' > /tmp/active-key-readme && jsdoc --verbose -d docs/api -c jsdoc.json -R /tmp/active-key-readme -r ./src",
     "build:babel": "babel ./src --out-dir dist --ignore '**/*.test.js'",
     "build:browser": "browserify -p browserify-prepend-licenses dist/index.js --standalone KeyWatcher -o dist/browser.js",
     "prepublishOnly": "npm run build",
@@ -35,6 +35,8 @@
     "cross-env": "^5.0.5",
     "documentation": "^5.2.2",
     "eslint": "^4.5.0",
+    "jsdoc": "^3.5.4",
+    "jsdoc-escape-at": "^1.0.1",
     "karma": "^1.7.0",
     "karma-chai": "^0.1.0",
     "karma-chrome-launcher": "^2.2.0",

@@ -38,9 +38,21 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /**
  * React helper module for active-keys.
- * Adds `.activeKeys` to `state`. Can also be used as a decorator.
+ * Adds `.activeKeys` to `state`.
  * @module react
+ *
  * @example
+ * // decorator
+ * import keyWatcher from 'active-keys/dist/react';
+ * \@keyWatcher
+ * class MyComponent extends Component {
+ *   componentWillUpdate(nextProps, nextState) {
+ *     console.log(nextState.activeKeys);
+ *   }
+ * }
+ *
+ * @example
+ * // non-decorator
  * import keyWatcher from 'active-keys/dist/react';
  * class MyComponent extends Component {
  *   componentWillUpdate(nextProps, nextState) {

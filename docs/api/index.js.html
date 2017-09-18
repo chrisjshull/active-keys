@@ -1,4 +1,32 @@
-/*!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: index.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: index.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/*!
  * Copyright (C) 2017 Dremio Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,53 +102,41 @@ export class KeyWatcher extends EventTargetShim {
   }
 
   _handleKeydown({key, location}) {
-    let [newKey, changed] = this._handleModifiers(key);
-    key = newKey;
+    key = this._handleModifiers(key);
+    if (!key) return;
 
-    if (key) {
-      const wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
-      const bitwise = 1 << location;
+    const wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
+    const bitwise = 1 &lt;&lt; location;
 
-      if (!(this.activeKeys[key] & bitwise)) {
-        this.activeKeys[key] |= bitwise;
-        if (!wasActive) changed = true;
-      }
+    if (this.activeKeys[key] &amp; bitwise) return;
+
+    this.activeKeys[key] |= bitwise;
+
+    if (!wasActive) {
+      this._dispatch();
     }
-
-    changed && this._dispatch();
+    // console.log(location, key, bitwise, this.activeKeys);
   }
 
   _handleKeyup({key, location}) {
-    let [newKey, changed] = this._handleModifiers(key);
-    key = newKey;
+    key = this._handleModifiers(key);
+    if (!key) return;
 
-    const done = () => void (changed && this._dispatch());
+    if (!this.activeKeys[key]) return;
 
-    if (key) {
+    const bitwiseInverse = ~(1 &lt;&lt; location);
 
-//     if (!this._isNamedKey(key)) {
-//       this._removeUnnamedKeys();
-//     }
-
-      if (this.activeKeys[key]) {
-
-        const bitwiseInverse = ~(1 << location);
-
-        this.activeKeys[key] &= bitwiseInverse;
-        if (!this.activeKeys[key]) {
-          delete this.activeKeys[key];
-          changed = true;
-        }
-      }
+    this.activeKeys[key] &amp;= bitwiseInverse;
+    if (!this.activeKeys[key]) {
+      delete this.activeKeys[key];
+      this._dispatch();
     }
-
-    changed && this._dispatch();
+    // console.log(location, evt.key, bitwiseInverse, this.activeKeys);
   }
 
   _handleBlur() {
     // once the window/tab/frame loses focus we won't get keyup events
-    // so err on the side of a full reset.
-    // e.g. new tab, app switching, print dialog
+    // so err on the side of a full reset
     this._removeAll();
   }
 
@@ -130,43 +146,34 @@ export class KeyWatcher extends EventTargetShim {
       delete this.activeKeys[activeKey];
     }
 
-    this._dispatch();
-  }
-
-  _isNamedKey(key) {
-    return key.match(/^[A-Z][a-zA-Z0-9]+$/); // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
-  }
-
-  _removeUnnamedKeys() {
-    let removed = false;
-    for (const activeKey of Object.keys(this.activeKeys)) {
-      if (this._isNamedKey(activeKey)) continue;
-      delete this.activeKeys[activeKey];
-      removed = true;
-    }
-    return removed;
+    //this._dispatch();
   }
 
   _handleModifiers(key) {
     // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
     // so will err on the side of resetting all unnamed keys
     // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-    if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
+    if (key !== 'Shift' &amp;&amp; key !== 'CapsLock' &amp;&amp; key !== 'AltGraph') {
       // a similar situation can happen when a Dead key is hit.
       // e.g. on a US Mac keyboard;
       // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
       // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
       if (key !== 'Dead') {
-        return [key, false];
+        return key;
       }
     }
 
-    const changed = this._removeUnnamedKeys();
+    for (const activeKey of Object.keys(this.activeKeys)) {
+      if (activeKey.match(/^[A-Z][a-zA-Z0-9]+$/)) continue; // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
+      delete this.activeKeys[activeKey];
+    }
 
     // The Dead key can also get stuck, and it's not a real key, so just ignore it.
     // e.g. on a US Mac keyboard;
     // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-    return [key === 'Dead' ? null : key, changed];
+    if (key === 'Dead') return null;
+
+    return key;
   }
 
   _dispatch() {
@@ -184,3 +191,26 @@ export class KeyWatcher extends EventTargetShim {
 }
 
 export default new KeyWatcher();
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li><li><a href="module-react.html">react</a></li></ul><h3>Classes</h3><ul><li><a href="module-index.KeyWatcher.html">KeyWatcher</a></li></ul><h3>Events</h3><ul><li><a href="module-index.KeyWatcher.html#event:change">change</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.4</a> on Sat Sep 16 2017 17:32:19 GMT-0700 (PDT)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
