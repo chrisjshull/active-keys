@@ -94,13 +94,14 @@ export class KeyWatcher extends EventTargetShim {
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
 
-    const done = () => void (changed && this._dispatch());
-
     if (key) {
 
-//     if (!this._isNamedKey(key)) {
-//       this._removeUnnamedKeys();
-//     }
+      // Safety for browser/OS shortcuts
+      // While Chrome might be detected with missing keypress, FF cannot be.
+      // So lacking a better idea for now, being a bit aggressive...
+      if (this._isNamedKey(key)) {
+        changed = this._removeUnnamedKeys();
+      }
 
       if (this.activeKeys[key]) {
 

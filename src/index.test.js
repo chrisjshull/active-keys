@@ -147,6 +147,20 @@ describe('KeyWatcher', () => {
       expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys).to.be.eql({});
     });
+
+    it('browser/OS keyboard shortcuts', () => {
+      subject.handleEvent({type: 'keydown', key: 'e'});
+      subject.handleEvent({type: 'keydown', key: 'Meta'});
+      // up e: no keyup e fired upon release
+      subject.handleEvent({type: 'keyup', key: 'Meta'});
+      expect(subject.activeKeys).to.be.eql({});
+
+      subject.handleEvent({type: 'keydown', key: 'Meta'});
+      subject.handleEvent({type: 'keydown', key: 'e'});
+      // up e: no keyup e fired upon release
+      subject.handleEvent({type: 'keyup', key: 'Meta'});
+      expect(subject.activeKeys).to.be.eql({});
+    });
   });
 });
 
