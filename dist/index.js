@@ -5,6 +5,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.KeyWatcher = undefined;
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _eventTargetShim = require('event-target-shim');
@@ -107,20 +109,24 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       var key = _ref.key,
           location = _ref.location;
 
-      key = this._handleModifiers(key);
-      if (!key) return;
+      var _handleModifiers2 = this._handleModifiers(key),
+          _handleModifiers3 = _slicedToArray(_handleModifiers2, 2),
+          newKey = _handleModifiers3[0],
+          changed = _handleModifiers3[1];
 
-      var wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
-      var bitwise = 1 << location;
+      key = newKey;
 
-      if (this.activeKeys[key] & bitwise) return;
+      if (key) {
+        var wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
+        var bitwise = 1 << location;
 
-      this.activeKeys[key] |= bitwise;
-
-      if (!wasActive) {
-        this._dispatch();
+        if (!(this.activeKeys[key] & bitwise)) {
+          this.activeKeys[key] |= bitwise;
+          if (!wasActive) changed = true;
+        }
       }
-      // console.log(location, key, bitwise, this.activeKeys);
+
+      changed && this._dispatch();
     }
   }, {
     key: '_handleKeyup',
@@ -128,25 +134,43 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       var key = _ref2.key,
           location = _ref2.location;
 
-      key = this._handleModifiers(key);
-      if (!key) return;
+      var _handleModifiers4 = this._handleModifiers(key),
+          _handleModifiers5 = _slicedToArray(_handleModifiers4, 2),
+          newKey = _handleModifiers5[0],
+          changed = _handleModifiers5[1];
 
-      if (!this.activeKeys[key]) return;
+      key = newKey;
 
-      var bitwiseInverse = ~(1 << location);
+      if (key) {
 
-      this.activeKeys[key] &= bitwiseInverse;
-      if (!this.activeKeys[key]) {
-        delete this.activeKeys[key];
-        this._dispatch();
+        // Safety for browser/OS shortcuts
+        // While Chrome might be detected with missing keypress, FF cannot be.
+        // So lacking a better idea for now, being a bit aggressive...
+        // (Also helps with down:f, down:Alt, up:Alt -> ƒ type bugs)
+        if (this._isNamedKey(key)) {
+          changed = this._removeUnnamedKeys();
+        }
+
+        if (this.activeKeys[key]) {
+
+          var bitwiseInverse = ~(1 << location);
+
+          this.activeKeys[key] &= bitwiseInverse;
+          if (!this.activeKeys[key]) {
+            delete this.activeKeys[key];
+            changed = true;
+          }
+        }
       }
-      // console.log(location, evt.key, bitwiseInverse, this.activeKeys);
+
+      changed && this._dispatch();
     }
   }, {
     key: '_handleBlur',
     value: function _handleBlur() {
       // once the window/tab/frame loses focus we won't get keyup events
-      // so err on the side of a full reset
+      // so err on the side of a full reset.
+      // e.g. new tab, app switching, print dialog
       this._removeAll();
     }
   }, {
@@ -163,8 +187,6 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
 
           delete this.activeKeys[activeKey];
         }
-
-        //this._dispatch();
       } catch (err) {
         _didIteratorError = true;
         _iteratorError = err;
@@ -179,23 +201,18 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
           }
         }
       }
+
+      this._dispatch();
     }
   }, {
-    key: '_handleModifiers',
-    value: function _handleModifiers(key) {
-      // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
-      // so will err on the side of resetting all unnamed keys
-      // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-      if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
-        // a similar situation can happen when a Dead key is hit.
-        // e.g. on a US Mac keyboard;
-        // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
-        // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-        if (key !== 'Dead') {
-          return key;
-        }
-      }
-
+    key: '_isNamedKey',
+    value: function _isNamedKey(key) {
+      return key.match(/^[A-Z][a-zA-Z0-9]+$/); // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
+    }
+  }, {
+    key: '_removeUnnamedKeys',
+    value: function _removeUnnamedKeys() {
+      var removed = false;
       var _iteratorNormalCompletion2 = true;
       var _didIteratorError2 = false;
       var _iteratorError2 = undefined;
@@ -204,13 +221,10 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
         for (var _iterator2 = Object.keys(this.activeKeys)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
           var activeKey = _step2.value;
 
-          if (activeKey.match(/^[A-Z][a-zA-Z0-9]+$/)) continue; // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
+          if (this._isNamedKey(activeKey)) continue;
           delete this.activeKeys[activeKey];
+          removed = true;
         }
-
-        // The Dead key can also get stuck, and it's not a real key, so just ignore it.
-        // e.g. on a US Mac keyboard;
-        // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
       } catch (err) {
         _didIteratorError2 = true;
         _iteratorError2 = err;
@@ -226,9 +240,30 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
         }
       }
 
-      if (key === 'Dead') return null;
+      return removed;
+    }
+  }, {
+    key: '_handleModifiers',
+    value: function _handleModifiers(key) {
+      // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
+      // so will err on the side of resetting all unnamed keys
+      // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+      if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
+        // a similar situation can happen when a Dead key is hit.
+        // e.g. on a US Mac keyboard;
+        // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
+        // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+        if (key !== 'Dead') {
+          return [key, false];
+        }
+      }
 
-      return key;
+      var changed = this._removeUnnamedKeys();
+
+      // The Dead key can also get stuck, and it's not a real key, so just ignore it.
+      // e.g. on a US Mac keyboard;
+      // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+      return [key === 'Dead' ? null : key, changed];
     }
   }, {
     key: '_dispatch',

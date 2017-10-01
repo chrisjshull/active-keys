@@ -70,10 +70,15 @@ export class KeyWatcher extends EventTargetShim {
    */
   handleEvent(evt) {
     const typeHandler = '_handle' + evt.type[0].toUpperCase() + evt.type.slice(1);
-    if (this[typeHandler]) this[typeHandler](evt);
+    if (this[typeHandler]) {
+      this[typeHandler](evt);
+    } else {
+      console.warn(`No handler for ${evt.type} on KeyWatcher.`);
+    }
   }
 
   _handleKeydown({key, location}) {
+
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
 
@@ -91,18 +96,11 @@ export class KeyWatcher extends EventTargetShim {
   }
 
   _handleKeyup({key, location}) {
+
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
 
     if (key) {
-
-      // Safety for browser/OS shortcuts
-      // While Chrome might be detected with missing keypress, FF cannot be.
-      // So lacking a better idea for now, being a bit aggressive...
-      if (this._isNamedKey(key)) {
-        changed = this._removeUnnamedKeys();
-      }
-
       if (this.activeKeys[key]) {
 
         const bitwiseInverse = ~(1 << location);
@@ -148,21 +146,36 @@ export class KeyWatcher extends EventTargetShim {
     return removed;
   }
 
+  get _eventModifierKeyIsActive() {
+    return this.activeKeys.Alt || this.activeKeys.Control || this.activeKeys.Meta || this.activeKeys.Shift;
+  }
+
   _handleModifiers(key) {
-    // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
-    // so will err on the side of resetting all unnamed keys
-    // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-    if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
-      // a similar situation can happen when a Dead key is hit.
-      // e.g. on a US Mac keyboard;
-      // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
-      // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-      if (key !== 'Dead') {
-        return [key, false];
-      }
+    let changed = false;
+
+    // Safety for browser/OS shortcuts
+    // While Chrome might be detected with missing keypress, FF cannot be.
+    // So lacking a better idea for now, being a bit aggressive...
+    // Also handles respected modifier safety.
+    if (this._isNamedKey(key)) {
+      changed = changed || this._removeUnnamedKeys();
     }
 
-    const changed = this._removeUnnamedKeys();
+    // currently redundant:
+    //     // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
+    //     // so will err on the side of resetting all unnamed keys
+    //     // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+    //     if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
+    //       // a similar situation can happen when a Dead key is hit.
+    //       // e.g. on a US Mac keyboard;
+    //       // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
+    //       // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+    //       if (key !== 'Dead') {
+    //         return [key, changed];
+    //       }
+    //     }
+    //
+    //     changed = changed || this._removeUnnamedKeys();
 
     // The Dead key can also get stuck, and it's not a real key, so just ignore it.
     // e.g. on a US Mac keyboard;

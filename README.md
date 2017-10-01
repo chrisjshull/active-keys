@@ -1,10 +1,6 @@
 <!--
 TODO: update repo description and URL, get pages turned on. index for pages? GIF
 TODO: replace docs/ URLs with GH pages links
-Todo: cmd-e type issues
-tabb out, shift tab out
-// - down:f, down:Alt, up:alt -> bug
-cmd-tab*N back to Chrome
 -->
 
 # active-keys

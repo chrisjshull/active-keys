@@ -43,8 +43,8 @@ describe('KeyWatcher', () => {
   describe('key down', () => {
     it('basic', () => {
       subject.handleEvent({type: 'keydown', key: 'Alt'});
-      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys.Alt).to.be.ok;
+      expect(changeListener.callCount).to.be.equal(1);
     });
   });
 
@@ -53,42 +53,42 @@ describe('KeyWatcher', () => {
       subject.handleEvent({type: 'keydown', key: 'Alt'});
       changeListener.reset();
       subject.handleEvent({type: 'keyup', key: 'Alt'});
-      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys.Alt).to.not.be.ok;
+      expect(changeListener.callCount).to.be.equal(1);
     });
 
     it('missing keydown', () => {
       subject.handleEvent({type: 'keyup', key: 'Alt'});
-      expect(changeListener.callCount).to.be.equal(0);
       expect(subject.activeKeys.Alt).to.not.be.ok;
+      expect(changeListener.callCount).to.be.equal(0);
     });
   });
 
   it('same key, various locations', () => {
     subject.handleEvent({type: 'keydown', key: 'Alt', location: 0});
-    expect(changeListener.callCount).to.be.equal(1);
     expect(subject.activeKeys.Alt).to.be.ok;
+    expect(changeListener.callCount).to.be.equal(1);
 
     subject.handleEvent({type: 'keydown', key: 'Alt', location: 0}); // same again
-    expect(changeListener.callCount).to.be.equal(1);
     expect(subject.activeKeys.Alt).to.be.ok;
+    expect(changeListener.callCount).to.be.equal(1);
 
     subject.handleEvent({type: 'keydown', key: 'Alt', location: 1});
-    expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
     expect(subject.activeKeys.Alt).to.be.ok;
+    expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
 
     subject.handleEvent({type: 'keyup', key: 'Alt', location: 1});
-    expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
     expect(subject.activeKeys.Alt).to.be.ok;
+    expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
 
     // use third location to prove not count based
     subject.handleEvent({type: 'keyup', key: 'Alt', location: 3});
-    expect(changeListener.callCount).to.be.equal(1);
     expect(subject.activeKeys.Alt).to.be.ok;
+    expect(changeListener.callCount).to.be.equal(1);
 
     subject.handleEvent({type: 'keyup', key: 'Alt', location: 0});
-    expect(changeListener.callCount).to.be.equal(2);
     expect(subject.activeKeys.Alt).to.not.be.ok;
+    expect(changeListener.callCount).to.be.equal(2);
   });
 
   it('unknown event', () => {
@@ -101,8 +101,8 @@ describe('KeyWatcher', () => {
     it('blur', () => {
       subject.handleEvent({type: 'keydown', key: 'Alt'});
       subject.handleEvent({type: 'blur'});
-      expect(changeListener.callCount).to.be.equal(2);
       expect(subject.activeKeys).to.be.eql({});
+      expect(changeListener.callCount).to.be.equal(2);
     });
 
     it('respected modifiers', () => {
@@ -111,14 +111,36 @@ describe('KeyWatcher', () => {
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'Shift'});
       subject.handleEvent({type: 'keydown', key: 'E'}); // auto-done (in Chrome/Mac)
-      expect(changeListener.callCount).to.be.equal(2);
       expect(subject.activeKeys).to.be.eql({ArrowDown: 1, Shift: 1, E: 1});
-
-      changeListener.reset();
+      expect(changeListener.callCount).to.be.equal(2);
       subject.handleEvent({type: 'keyup', key: 'Shift'});
       subject.handleEvent({type: 'keydown', key: 'e'}); // auto-done (in Chrome/Mac)
-      expect(changeListener.callCount).to.be.equal(2);
       expect(subject.activeKeys).to.be.eql({ArrowDown: 1, e: 1});
+      expect(changeListener.callCount).to.be.equal(4);
+
+      subject.activeKeys = {};
+      changeListener.reset();
+      subject.handleEvent({type: 'keydown', key: 'f'});
+      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'ƒ'}); // auto-done (in Chrome/Mac)
+      expect(subject.activeKeys).to.be.eql({Alt: 1, ƒ: 1});
+      expect(changeListener.callCount).to.be.equal(3);
+      subject.handleEvent({type: 'keyup', key: 'ƒ'});
+      subject.handleEvent({type: 'keyup', key: 'Alt'});
+      expect(subject.activeKeys).to.be.eql({});
+      expect(changeListener.callCount).to.be.equal(5);
+
+      subject.activeKeys = {};
+      changeListener.reset();
+      subject.handleEvent({type: 'keydown', key: 'f'});
+      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'ƒ'}); // auto-done (in Chrome/Mac)
+      expect(subject.activeKeys).to.be.eql({Alt: 1, ƒ: 1});
+      expect(changeListener.callCount).to.be.equal(3);
+      subject.handleEvent({type: 'keyup', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'f'}); // auto-done (in Chrome/Mac)
+      expect(subject.activeKeys).to.be.eql({f: 1});
+      expect(changeListener.callCount).to.be.equal(5);
     });
 
     it('Dead', () => {
@@ -126,26 +148,24 @@ describe('KeyWatcher', () => {
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'Alt'});
       subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
-      expect(changeListener.callCount).to.be.equal(2);
       expect(subject.activeKeys).to.be.eql({Alt: 1});
+      expect(changeListener.callCount).to.be.equal(1);
       // up e: no keyup e fired upon release
-      changeListener.reset();
       subject.handleEvent({type: 'keyup', key: 'Alt'});
       subject.handleEvent({type: 'keyup', key: 'Dead'}); // auto-done (in Chrome/Mac)
-      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys).to.be.eql({});
+      expect(changeListener.callCount).to.be.equal(2);
 
       subject.handleEvent({type: 'keydown', key: 'e'});
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'Alt'});
       subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
-      expect(changeListener.callCount).to.be.equal(2);
       expect(subject.activeKeys).to.be.eql({Alt: 1});
-      changeListener.reset();
+      expect(changeListener.callCount).to.be.equal(1);
       subject.handleEvent({type: 'keyup', key: 'Alt'});
       subject.handleEvent({type: 'keyup', key: 'e'});
-      expect(changeListener.callCount).to.be.equal(1);
       expect(subject.activeKeys).to.be.eql({});
+      expect(changeListener.callCount).to.be.equal(2);
     });
 
     it('browser/OS keyboard shortcuts', () => {
@@ -161,6 +181,22 @@ describe('KeyWatcher', () => {
       subject.handleEvent({type: 'keyup', key: 'Meta'});
       expect(subject.activeKeys).to.be.eql({});
     });
+
+    it('Meta-Tab back around', () => {
+      subject.handleEvent({type: 'keydown', key: 'Meta'});
+      // down Tab * N: OS eats
+      // up Tab: OS eats
+      // up Meta: OS eats
+
+    });
+
+    it('cmd-Enter', () => {
+
+    });
+
+    it('tabb out, shift tab out ???', () => {
+
+    });
+
   });
 });
-
