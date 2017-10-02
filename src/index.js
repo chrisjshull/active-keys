@@ -29,6 +29,54 @@
 
 import EventTargetShim from 'event-target-shim';
 
+// not sure if this is complete. Likely need to add more over time:
+// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
+const EVENTS_WITH_MODIFIER_KEYS = new Set(`
+touchstart
+touchend
+touchmove
+touchcancel
+
+click
+dblclick
+mousedown
+mouseenter
+mouseleave
+mousemove
+mouseout
+mouseover
+mouseup
+contextmenu
+
+dragstart
+drag
+dragenter
+dragexit
+dragleave
+dragover
+drop
+dragend
+
+wheel
+`.split('\n').filter(Boolean));
+
+const PASSIVE_SUPPORTED = (() => {
+  let passiveSupported = false;
+
+  try {
+    const options = Object.defineProperty({}, 'passive', {
+      get() {
+        passiveSupported = true;
+      }
+    });
+
+    window.addEventListener('passive-support-test', null, options);
+  } catch (error) {
+    // ignore
+  }
+  return passiveSupported;
+})();
+
 /**
  * Tracks which keys are currently held down.
  */
@@ -41,6 +89,8 @@ export class KeyWatcher extends EventTargetShim {
    * @fires {@link module:index.KeyWatcher#change|change} when updated.
    */
   activeKeys = {};
+
+  _isListeningForEventsWithModifierKeys = false;
 
   /**
    * @method module:index.KeyWatcher#addEventListener
@@ -63,6 +113,9 @@ export class KeyWatcher extends EventTargetShim {
     window.removeEventListener('keydown', this);
     window.removeEventListener('keyup', this);
     window.removeEventListener('blur', this);
+    for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+      window.removeEventListener(eventType, this);
+    }
   }
 
   /**
@@ -70,17 +123,46 @@ export class KeyWatcher extends EventTargetShim {
    */
   handleEvent(evt) {
     const typeHandler = '_handle' + evt.type[0].toUpperCase() + evt.type.slice(1);
+    let ret;
     if (this[typeHandler]) {
-      this[typeHandler](evt);
+      ret = this[typeHandler](evt);
+    } else if (EVENTS_WITH_MODIFIER_KEYS.has(evt.type)) {
+      ret = this._handleEventWithModifierKey(evt);
     } else {
-      console.warn(`No handler for ${evt.type} on KeyWatcher.`);
+      console.warn(`No event handler for "${evt.type}" on KeyWatcher.`);
     }
+
+    if (this._isListeningForEventsWithModifierKeys !== this._eventModifierKeyIsActive) {
+      const opts = PASSIVE_SUPPORTED ? {passive: true, capture: true} : true;
+
+      if (this._isListeningForEventsWithModifierKeys) {
+        this._isListeningForEventsWithModifierKeys = false;
+        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+          window.removeEventListener(eventType, this, opts);
+        }
+      } else {
+        this._isListeningForEventsWithModifierKeys = true;
+        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+          window.addEventListener(eventType, this, opts);
+        }
+      }
+    }
+
+    return ret;
   }
 
-  _handleKeydown({key, location}) {
+  _handleEventWithModifierKey(evt) {
+    const changed = this._removeStuckModifiers(evt);
+    changed && this._dispatch();
+  }
+
+  _handleKeydown(evt) {
+    let {key, location} = evt;
 
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
+
+    changed = this._removeStuckModifiers(evt) || changed; // always do _removeStuckModifiers()
 
     if (key) {
       const wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
@@ -95,10 +177,13 @@ export class KeyWatcher extends EventTargetShim {
     changed && this._dispatch();
   }
 
-  _handleKeyup({key, location}) {
+  _handleKeyup(evt) {
+    let {key, location} = evt;
 
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
+
+    changed = this._removeStuckModifiers(evt) || changed; // always do _removeStuckModifiers()
 
     if (key) {
       if (this.activeKeys[key]) {
@@ -146,8 +231,29 @@ export class KeyWatcher extends EventTargetShim {
     return removed;
   }
 
+  _removeStuckModifiers({altKey, ctrlKey, metaKey, shiftKey}) {
+    let changed = false;
+    if (this.activeKeys.Alt && !altKey) {
+      delete this.activeKeys.Alt;
+      changed = true;
+    }
+    if (this.activeKeys.Control && !ctrlKey) {
+      delete this.activeKeys.Control;
+      changed = true;
+    }
+    if (this.activeKeys.Meta && !metaKey) {
+      delete this.activeKeys.Meta;
+      changed = true;
+    }
+    if (this.activeKeys.Shift && !shiftKey) {
+      delete this.activeKeys.Shift;
+      changed = true;
+    }
+    return changed;
+  }
+
   get _eventModifierKeyIsActive() {
-    return this.activeKeys.Alt || this.activeKeys.Control || this.activeKeys.Meta || this.activeKeys.Shift;
+    return !!(this.activeKeys.Alt || this.activeKeys.Control || this.activeKeys.Meta || this.activeKeys.Shift);
   }
 
   _handleModifiers(key) {
@@ -158,7 +264,7 @@ export class KeyWatcher extends EventTargetShim {
     // So lacking a better idea for now, being a bit aggressive...
     // Also handles respected modifier safety.
     if (this._isNamedKey(key)) {
-      changed = changed || this._removeUnnamedKeys();
+      changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
     }
 
     // currently redundant:
@@ -175,7 +281,7 @@ export class KeyWatcher extends EventTargetShim {
     //       }
     //     }
     //
-    //     changed = changed || this._removeUnnamedKeys();
+    //     changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
 
     // The Dead key can also get stuck, and it's not a real key, so just ignore it.
     // e.g. on a US Mac keyboard;

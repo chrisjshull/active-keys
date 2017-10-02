@@ -57,6 +57,54 @@
 
 import EventTargetShim from 'event-target-shim';
 
+// not sure if this is complete. Likely need to add more over time:
+// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
+const EVENTS_WITH_MODIFIER_KEYS = new Set(`
+touchstart
+touchend
+touchmove
+touchcancel
+
+click
+dblclick
+mousedown
+mouseenter
+mouseleave
+mousemove
+mouseout
+mouseover
+mouseup
+contextmenu
+
+dragstart
+drag
+dragenter
+dragexit
+dragleave
+dragover
+drop
+dragend
+
+wheel
+`.split('\n').filter(Boolean));
+
+const PASSIVE_SUPPORTED = (() => {
+  let passiveSupported = false;
+
+  try {
+    const options = Object.defineProperty({}, 'passive', {
+      get() {
+        passiveSupported = true;
+      }
+    });
+
+    window.addEventListener('passive-support-test', null, options);
+  } catch (error) {
+    // ignore
+  }
+  return passiveSupported;
+})();
+
 /**
  * Tracks which keys are currently held down.
  */
@@ -69,6 +117,8 @@ export class KeyWatcher extends EventTargetShim {
    * @fires {@link module:index.KeyWatcher#change|change} when updated.
    */
   activeKeys = {};
+
+  _isListeningForEventsWithModifierKeys = false;
 
   /**
    * @method module:index.KeyWatcher#addEventListener
@@ -91,6 +141,9 @@ export class KeyWatcher extends EventTargetShim {
     window.removeEventListener('keydown', this);
     window.removeEventListener('keyup', this);
     window.removeEventListener('blur', this);
+    for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+      window.removeEventListener(eventType, this);
+    }
   }
 
   /**
@@ -98,12 +151,46 @@ export class KeyWatcher extends EventTargetShim {
    */
   handleEvent(evt) {
     const typeHandler = '_handle' + evt.type[0].toUpperCase() + evt.type.slice(1);
-    if (this[typeHandler]) this[typeHandler](evt);
+    let ret;
+    if (this[typeHandler]) {
+      ret = this[typeHandler](evt);
+    } else if (EVENTS_WITH_MODIFIER_KEYS.has(evt.type)) {
+      ret = this._handleEventWithModifierKey(evt);
+    } else {
+      console.warn(`No event handler for "${evt.type}" on KeyWatcher.`);
+    }
+
+    if (this._isListeningForEventsWithModifierKeys !== this._eventModifierKeyIsActive) {
+      const opts = PASSIVE_SUPPORTED ? {passive: true, capture: true} : true;
+
+      if (this._isListeningForEventsWithModifierKeys) {
+        this._isListeningForEventsWithModifierKeys = false;
+        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+          window.removeEventListener(eventType, this, opts);
+        }
+      } else {
+        this._isListeningForEventsWithModifierKeys = true;
+        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
+          window.addEventListener(eventType, this, opts);
+        }
+      }
+    }
+
+    return ret;
   }
 
-  _handleKeydown({key, location}) {
+  _handleEventWithModifierKey(evt) {
+    const changed = this._removeStuckModifiers(evt);
+    changed &amp;&amp; this._dispatch();
+  }
+
+  _handleKeydown(evt) {
+    let {key, location} = evt;
+
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
+
+    changed = this._removeStuckModifiers(evt) || changed; // always do _removeStuckModifiers()
 
     if (key) {
       const wasActive = this.activeKeys[key] = this.activeKeys[key] || 0;
@@ -118,20 +205,15 @@ export class KeyWatcher extends EventTargetShim {
     changed &amp;&amp; this._dispatch();
   }
 
-  _handleKeyup({key, location}) {
+  _handleKeyup(evt) {
+    let {key, location} = evt;
+
     let [newKey, changed] = this._handleModifiers(key);
     key = newKey;
 
+    changed = this._removeStuckModifiers(evt) || changed; // always do _removeStuckModifiers()
+
     if (key) {
-
-      // Safety for browser/OS shortcuts
-      // While Chrome might be detected with missing keypress, FF cannot be.
-      // So lacking a better idea for now, being a bit aggressive...
-      // (Also helps with down:f, down:Alt, up:Alt -> ƒ type bugs)
-      if (this._isNamedKey(key)) {
-        changed = this._removeUnnamedKeys();
-      }
-
       if (this.activeKeys[key]) {
 
         const bitwiseInverse = ~(1 &lt;&lt; location);
@@ -177,21 +259,57 @@ export class KeyWatcher extends EventTargetShim {
     return removed;
   }
 
+  _removeStuckModifiers({altKey, ctrlKey, metaKey, shiftKey}) {
+    let changed = false;
+    if (this.activeKeys.Alt &amp;&amp; !altKey) {
+      delete this.activeKeys.Alt;
+      changed = true;
+    }
+    if (this.activeKeys.Control &amp;&amp; !ctrlKey) {
+      delete this.activeKeys.Control;
+      changed = true;
+    }
+    if (this.activeKeys.Meta &amp;&amp; !metaKey) {
+      delete this.activeKeys.Meta;
+      changed = true;
+    }
+    if (this.activeKeys.Shift &amp;&amp; !shiftKey) {
+      delete this.activeKeys.Shift;
+      changed = true;
+    }
+    return changed;
+  }
+
+  get _eventModifierKeyIsActive() {
+    return !!(this.activeKeys.Alt || this.activeKeys.Control || this.activeKeys.Meta || this.activeKeys.Shift);
+  }
+
   _handleModifiers(key) {
-    // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
-    // so will err on the side of resetting all unnamed keys
-    // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-    if (key !== 'Shift' &amp;&amp; key !== 'CapsLock' &amp;&amp; key !== 'AltGraph') {
-      // a similar situation can happen when a Dead key is hit.
-      // e.g. on a US Mac keyboard;
-      // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
-      // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-      if (key !== 'Dead') {
-        return [key, false];
-      }
+    let changed = false;
+
+    // Safety for browser/OS shortcuts
+    // While Chrome might be detected with missing keypress, FF cannot be.
+    // So lacking a better idea for now, being a bit aggressive...
+    // Also handles respected modifier safety.
+    if (this._isNamedKey(key)) {
+      changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
     }
 
-    const changed = this._removeUnnamedKeys();
+    // currently redundant:
+    //     // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
+    //     // so will err on the side of resetting all unnamed keys
+    //     // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+    //     if (key !== 'Shift' &amp;&amp; key !== 'CapsLock' &amp;&amp; key !== 'AltGraph') {
+    //       // a similar situation can happen when a Dead key is hit.
+    //       // e.g. on a US Mac keyboard;
+    //       // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
+    //       // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
+    //       if (key !== 'Dead') {
+    //         return [key, changed];
+    //       }
+    //     }
+    //
+    //     changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
 
     // The Dead key can also get stuck, and it's not a real key, so just ignore it.
     // e.g. on a US Mac keyboard;
@@ -230,7 +348,7 @@ export default new KeyWatcher();
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.4</a> on Sun Oct 01 2017 10:15:44 GMT-0700 (PDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.4</a> on Sun Oct 01 2017 12:26:40 GMT-0700 (PDT)
 </footer>
 
 <script> prettyPrint(); </script>

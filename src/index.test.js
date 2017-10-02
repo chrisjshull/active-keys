@@ -42,7 +42,7 @@ describe('KeyWatcher', () => {
 
   describe('key down', () => {
     it('basic', () => {
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
       expect(subject.activeKeys.Alt).to.be.ok;
       expect(changeListener.callCount).to.be.equal(1);
     });
@@ -50,7 +50,7 @@ describe('KeyWatcher', () => {
 
   describe('key up', () => {
     it('basic', () => {
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
       changeListener.reset();
       subject.handleEvent({type: 'keyup', key: 'Alt'});
       expect(subject.activeKeys.Alt).to.not.be.ok;
@@ -65,24 +65,24 @@ describe('KeyWatcher', () => {
   });
 
   it('same key, various locations', () => {
-    subject.handleEvent({type: 'keydown', key: 'Alt', location: 0});
+    subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true, location: 0});
     expect(subject.activeKeys.Alt).to.be.ok;
     expect(changeListener.callCount).to.be.equal(1);
 
-    subject.handleEvent({type: 'keydown', key: 'Alt', location: 0}); // same again
+    subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true, location: 0}); // same again
     expect(subject.activeKeys.Alt).to.be.ok;
     expect(changeListener.callCount).to.be.equal(1);
 
-    subject.handleEvent({type: 'keydown', key: 'Alt', location: 1});
+    subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true, location: 1});
     expect(subject.activeKeys.Alt).to.be.ok;
     expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
 
-    subject.handleEvent({type: 'keyup', key: 'Alt', location: 1});
+    subject.handleEvent({type: 'keyup', key: 'Alt', altKey: true, location: 1});
     expect(subject.activeKeys.Alt).to.be.ok;
     expect(changeListener.callCount).to.be.equal(1); // only events on truthy/falsy change
 
     // use third location to prove not count based
-    subject.handleEvent({type: 'keyup', key: 'Alt', location: 3});
+    subject.handleEvent({type: 'keyup', key: 'Alt', altKey: true, location: 3});
     expect(subject.activeKeys.Alt).to.be.ok;
     expect(changeListener.callCount).to.be.equal(1);
 
@@ -92,14 +92,16 @@ describe('KeyWatcher', () => {
   });
 
   it('unknown event', () => {
+    sinon.stub(console, 'warn');
     subject.handleEvent({type: 'foo'});
+    console.warn.restore();
   });
 
   describe('safety resets', () => {
     //... blur, mod sequences
 
     it('blur', () => {
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
       subject.handleEvent({type: 'blur'});
       expect(subject.activeKeys).to.be.eql({});
       expect(changeListener.callCount).to.be.equal(2);
@@ -109,8 +111,8 @@ describe('KeyWatcher', () => {
       subject.handleEvent({type: 'keydown', key: 'ArrowDown'});
       subject.handleEvent({type: 'keydown', key: 'e'});
       changeListener.reset();
-      subject.handleEvent({type: 'keydown', key: 'Shift'});
-      subject.handleEvent({type: 'keydown', key: 'E'}); // auto-done (in Chrome/Mac)
+      subject.handleEvent({type: 'keydown', key: 'Shift', shiftKey: true});
+      subject.handleEvent({type: 'keydown', key: 'E', shiftKey: true}); // auto-done (in Chrome/Mac)
       expect(subject.activeKeys).to.be.eql({ArrowDown: 1, Shift: 1, E: 1});
       expect(changeListener.callCount).to.be.equal(2);
       subject.handleEvent({type: 'keyup', key: 'Shift'});
@@ -121,11 +123,11 @@ describe('KeyWatcher', () => {
       subject.activeKeys = {};
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'f'});
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
-      subject.handleEvent({type: 'keydown', key: 'ƒ'}); // auto-done (in Chrome/Mac)
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
+      subject.handleEvent({type: 'keydown', key: 'ƒ', altKey: true}); // auto-done (in Chrome/Mac)
       expect(subject.activeKeys).to.be.eql({Alt: 1, ƒ: 1});
       expect(changeListener.callCount).to.be.equal(3);
-      subject.handleEvent({type: 'keyup', key: 'ƒ'});
+      subject.handleEvent({type: 'keyup', key: 'ƒ', altKey: true});
       subject.handleEvent({type: 'keyup', key: 'Alt'});
       expect(subject.activeKeys).to.be.eql({});
       expect(changeListener.callCount).to.be.equal(5);
@@ -133,8 +135,8 @@ describe('KeyWatcher', () => {
       subject.activeKeys = {};
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'f'});
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
-      subject.handleEvent({type: 'keydown', key: 'ƒ'}); // auto-done (in Chrome/Mac)
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
+      subject.handleEvent({type: 'keydown', key: 'ƒ', altKey: true}); // auto-done (in Chrome/Mac)
       expect(subject.activeKeys).to.be.eql({Alt: 1, ƒ: 1});
       expect(changeListener.callCount).to.be.equal(3);
       subject.handleEvent({type: 'keyup', key: 'Alt'});
@@ -146,8 +148,8 @@ describe('KeyWatcher', () => {
     it('Dead', () => {
       subject.handleEvent({type: 'keydown', key: 'e'});
       changeListener.reset();
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
-      subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
+      subject.handleEvent({type: 'keydown', key: 'Dead', altKey: true}); // auto-done (in Chrome/Mac)
       expect(subject.activeKeys).to.be.eql({Alt: 1});
       expect(changeListener.callCount).to.be.equal(1);
       // up e: no keyup e fired upon release
@@ -158,8 +160,8 @@ describe('KeyWatcher', () => {
 
       subject.handleEvent({type: 'keydown', key: 'e'});
       changeListener.reset();
-      subject.handleEvent({type: 'keydown', key: 'Alt'});
-      subject.handleEvent({type: 'keydown', key: 'Dead'}); // auto-done (in Chrome/Mac)
+      subject.handleEvent({type: 'keydown', key: 'Alt', altKey: true});
+      subject.handleEvent({type: 'keydown', key: 'Dead', altKey: true}); // auto-done (in Chrome/Mac)
       expect(subject.activeKeys).to.be.eql({Alt: 1});
       expect(changeListener.callCount).to.be.equal(1);
       subject.handleEvent({type: 'keyup', key: 'Alt'});
@@ -170,31 +172,35 @@ describe('KeyWatcher', () => {
 
     it('browser/OS keyboard shortcuts', () => {
       subject.handleEvent({type: 'keydown', key: 'e'});
-      subject.handleEvent({type: 'keydown', key: 'Meta'});
+      subject.handleEvent({type: 'keydown', key: 'Control', ctrlKey: true});
+      expect(subject.activeKeys).to.be.eql({Control: 1});
       // up e: no keyup e fired upon release
-      subject.handleEvent({type: 'keyup', key: 'Meta'});
+      subject.handleEvent({type: 'keyup', key: 'Control'});
       expect(subject.activeKeys).to.be.eql({});
 
-      subject.handleEvent({type: 'keydown', key: 'Meta'});
-      subject.handleEvent({type: 'keydown', key: 'e'});
+      subject.handleEvent({type: 'keydown', key: 'Control', ctrlKey: true});
+      subject.handleEvent({type: 'keydown', key: 'e', ctrlKey: true});
+      expect(subject.activeKeys).to.be.eql({e: 1, Control: 1});
       // up e: no keyup e fired upon release
-      subject.handleEvent({type: 'keyup', key: 'Meta'});
+      subject.handleEvent({type: 'keyup', key: 'Control'});
       expect(subject.activeKeys).to.be.eql({});
     });
 
-    it('Meta-Tab back around', () => {
-      subject.handleEvent({type: 'keydown', key: 'Meta'});
+    it('stuck modifier cleanup', () => {
+      window.addEventListener.reset();
+      window.removeEventListener.reset();
+      // Meta-Tab without blur (all the way around)
+      subject.handleEvent({type: 'keydown', key: 'Meta', metaKey: true});
+      expect(window.addEventListener.callCount).to.eql(23);
       // down Tab * N: OS eats
       // up Tab: OS eats
       // up Meta: OS eats
-
+      subject.handleEvent({type: 'mousemove', metaKey: false});
+      expect(subject.activeKeys).to.be.eql({});
+      expect(window.removeEventListener.callCount).to.eql(23);
     });
 
-    it('cmd-Enter', () => {
-
-    });
-
-    it('tabb out, shift tab out ???', () => {
+    it('Meta-Enter', () => {
 
     });
 
