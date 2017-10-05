@@ -51,35 +51,13 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
  * @example
  * import keyWatcher from 'active-keys';
  * keyWatcher.addEventListener('change', () => {
- *   console.log(keyWatcher.activeKeys);
+ *   console.log(Object.keys(keyWatcher.activeKeys));
  * });
  */
-
-// not sure if this is complete. Likely need to add more over time:
-// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
-var EVENTS_WITH_MODIFIER_KEYS = new Set('\ntouchstart\ntouchend\ntouchmove\ntouchcancel\n\nclick\ndblclick\nmousedown\nmouseenter\nmouseleave\nmousemove\nmouseout\nmouseover\nmouseup\ncontextmenu\n\ndragstart\ndrag\ndragenter\ndragexit\ndragleave\ndragover\ndrop\ndragend\n\nwheel\n'.split('\n').filter(Boolean));
-
-var PASSIVE_SUPPORTED = function () {
-  var passiveSupported = false;
-
-  try {
-    var options = Object.defineProperty({}, 'passive', {
-      get: function get() {
-        passiveSupported = true;
-      }
-    });
-
-    window.addEventListener('passive-support-test', null, options);
-  } catch (error) {
-    // ignore
-  }
-  return passiveSupported;
-}();
 
 /**
  * Tracks which keys are currently held down.
  */
-
 var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
   _inherits(KeyWatcher, _EventTargetShim);
 
@@ -119,6 +97,12 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       window.removeEventListener('keydown', this);
       window.removeEventListener('keyup', this);
       window.removeEventListener('blur', this);
+      this._forEachEventWithModifierKeys('removeEventListener');
+    }
+  }, {
+    key: '_forEachEventWithModifierKeys',
+    value: function _forEachEventWithModifierKeys(method) {
+      var opts = PASSIVE_SUPPORTED ? { passive: true, capture: true } : true;
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -127,7 +111,7 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
         for (var _iterator = EVENTS_WITH_MODIFIER_KEYS[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var eventType = _step.value;
 
-          window.removeEventListener(eventType, this);
+          window[method](eventType, this, opts);
         }
       } catch (err) {
         _didIteratorError = true;
@@ -163,60 +147,12 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       }
 
       if (this._isListeningForEventsWithModifierKeys !== this._eventModifierKeyIsActive) {
-        var opts = PASSIVE_SUPPORTED ? { passive: true, capture: true } : true;
-
         if (this._isListeningForEventsWithModifierKeys) {
           this._isListeningForEventsWithModifierKeys = false;
-          var _iteratorNormalCompletion2 = true;
-          var _didIteratorError2 = false;
-          var _iteratorError2 = undefined;
-
-          try {
-            for (var _iterator2 = EVENTS_WITH_MODIFIER_KEYS[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-              var eventType = _step2.value;
-
-              window.removeEventListener(eventType, this, opts);
-            }
-          } catch (err) {
-            _didIteratorError2 = true;
-            _iteratorError2 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                _iterator2.return();
-              }
-            } finally {
-              if (_didIteratorError2) {
-                throw _iteratorError2;
-              }
-            }
-          }
+          this._forEachEventWithModifierKeys('removeEventListener');
         } else {
           this._isListeningForEventsWithModifierKeys = true;
-          var _iteratorNormalCompletion3 = true;
-          var _didIteratorError3 = false;
-          var _iteratorError3 = undefined;
-
-          try {
-            for (var _iterator3 = EVENTS_WITH_MODIFIER_KEYS[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-              var _eventType = _step3.value;
-
-              window.addEventListener(_eventType, this, opts);
-            }
-          } catch (err) {
-            _didIteratorError3 = true;
-            _iteratorError3 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                _iterator3.return();
-              }
-            } finally {
-              if (_didIteratorError3) {
-                throw _iteratorError3;
-              }
-            }
-          }
+          this._forEachEventWithModifierKeys('addEventListener');
         }
       }
 
@@ -297,27 +233,27 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
     key: '_removeAll',
     value: function _removeAll() {
       // maintain the object reference
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
 
       try {
-        for (var _iterator4 = Object.keys(this.activeKeys)[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-          var activeKey = _step4.value;
+        for (var _iterator2 = Object.keys(this.activeKeys)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var activeKey = _step2.value;
 
           delete this.activeKeys[activeKey];
         }
       } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion4 && _iterator4.return) {
-            _iterator4.return();
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
           }
         } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
+          if (_didIteratorError2) {
+            throw _iteratorError2;
           }
         }
       }
@@ -330,32 +266,47 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       return key.match(/^[A-Z][a-zA-Z0-9]+$/); // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
     }
   }, {
-    key: '_removeUnnamedKeys',
-    value: function _removeUnnamedKeys() {
+    key: '_isModifierKey',
+    value: function _isModifierKey(key) {
+      // these are the keys the spec specifies: https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+      if (key === 'Shift' || key === 'CapsLock' || key === 'AltGraph') {
+        return true;
+      }
+
+      // These also have impact though.
+      if (key === 'Meta' || key === 'Alt' || key === 'Control') {
+        return true;
+      }
+
+      return false;
+    }
+  }, {
+    key: '_removeNonModifierKeys',
+    value: function _removeNonModifierKeys() {
       var removed = false;
-      var _iteratorNormalCompletion5 = true;
-      var _didIteratorError5 = false;
-      var _iteratorError5 = undefined;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator5 = Object.keys(this.activeKeys)[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-          var activeKey = _step5.value;
+        for (var _iterator3 = Object.keys(this.activeKeys)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var activeKey = _step3.value;
 
-          if (this._isNamedKey(activeKey)) continue;
+          if (this._isModifierKey(activeKey)) continue;
           delete this.activeKeys[activeKey];
           removed = true;
         }
       } catch (err) {
-        _didIteratorError5 = true;
-        _iteratorError5 = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion5 && _iterator5.return) {
-            _iterator5.return();
+          if (!_iteratorNormalCompletion3 && _iterator3.return) {
+            _iterator3.return();
           }
         } finally {
-          if (_didIteratorError5) {
-            throw _iteratorError5;
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
@@ -399,24 +350,8 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
       // So lacking a better idea for now, being a bit aggressive...
       // Also handles respected modifier safety.
       if (this._isNamedKey(key)) {
-        changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
+        changed = this._removeNonModifierKeys() || changed; // always do _removeNonModifierKeys()
       }
-
-      // currently redundant:
-      //     // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
-      //     // so will err on the side of resetting all unnamed keys
-      //     // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-      //     if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
-      //       // a similar situation can happen when a Dead key is hit.
-      //       // e.g. on a US Mac keyboard;
-      //       // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
-      //       // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-      //       if (key !== 'Dead') {
-      //         return [key, changed];
-      //       }
-      //     }
-      //
-      //     changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
 
       // The Dead key can also get stuck, and it's not a real key, so just ignore it.
       // e.g. on a US Mac keyboard;
@@ -447,6 +382,28 @@ var KeyWatcher = exports.KeyWatcher = function (_EventTargetShim) {
 }(_eventTargetShim2.default);
 
 exports.default = new KeyWatcher();
+
+// not sure if this is complete. Likely need to add more over time:
+// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
+
+var EVENTS_WITH_MODIFIER_KEYS = new Set('\ntouchstart\ntouchend\ntouchmove\ntouchcancel\n\nclick\ndblclick\nmousedown\nmouseenter\nmouseleave\nmousemove\nmouseout\nmouseover\nmouseup\ncontextmenu\n\ndragstart\ndrag\ndragenter\ndragexit\ndragleave\ndragover\ndrop\ndragend\n\nwheel\n'.split('\n').filter(Boolean));
+
+var PASSIVE_SUPPORTED = function () {
+  var passiveSupported = false;
+
+  try {
+    var options = Object.defineProperty({}, 'passive', {
+      get: function get() {
+        passiveSupported = true;
+      }
+    });
+
+    window.addEventListener('passive-support-test', null, options);
+  } catch (error) {
+    // ignore
+  }
+  return passiveSupported;
+}();
 },{"event-target-shim":4}],2:[function(require,module,exports){
 /**
  * @author Toru Nagashima

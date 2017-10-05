@@ -25,7 +25,7 @@
  * \@keyWatcher
  * class MyComponent extends Component {
  *   componentWillUpdate(nextProps, nextState) {
- *     console.log(nextState.activeKeys);
+ *     console.log(Object.keys(nextState.activeKeys));
  *   }
  * }
  *
@@ -34,7 +34,7 @@
  * import keyWatcher from 'active-keys/dist/react';
  * class MyComponent extends Component {
  *   componentWillUpdate(nextProps, nextState) {
- *     console.log(nextState.activeKeys);
+ *     console.log(Object.keys(nextState.activeKeys));
  *   }
  * }
  * MyComponent = keyWatcher(MyComponent);

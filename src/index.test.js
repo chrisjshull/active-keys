@@ -108,16 +108,15 @@ describe('KeyWatcher', () => {
     });
 
     it('respected modifiers', () => {
-      subject.handleEvent({type: 'keydown', key: 'ArrowDown'});
       subject.handleEvent({type: 'keydown', key: 'e'});
       changeListener.reset();
       subject.handleEvent({type: 'keydown', key: 'Shift', shiftKey: true});
       subject.handleEvent({type: 'keydown', key: 'E', shiftKey: true}); // auto-done (in Chrome/Mac)
-      expect(subject.activeKeys).to.be.eql({ArrowDown: 1, Shift: 1, E: 1});
+      expect(subject.activeKeys).to.be.eql({Shift: 1, E: 1});
       expect(changeListener.callCount).to.be.equal(2);
       subject.handleEvent({type: 'keyup', key: 'Shift'});
       subject.handleEvent({type: 'keydown', key: 'e'}); // auto-done (in Chrome/Mac)
-      expect(subject.activeKeys).to.be.eql({ArrowDown: 1, e: 1});
+      expect(subject.activeKeys).to.be.eql({e: 1});
       expect(changeListener.callCount).to.be.equal(4);
 
       subject.activeKeys = {};
@@ -201,7 +200,14 @@ describe('KeyWatcher', () => {
     });
 
     it('Meta-Enter', () => {
+      // Enter will get stuck on, but as soon as Meta is released it will reset
 
+      subject.handleEvent({type: 'keydown', key: 'Meta', metaKey: true});
+      subject.handleEvent({type: 'keydown', key: 'Enter', metaKey: true});
+      expect(subject.activeKeys).to.be.eql({Meta: 1, Enter: 1});
+      // up Enter: no keyup Enter fired upon release
+      subject.handleEvent({type: 'keyup', key: 'Meta'});
+      expect(subject.activeKeys).to.be.eql({});
     });
 
   });

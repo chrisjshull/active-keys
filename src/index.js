@@ -23,59 +23,11 @@
  * @example
  * import keyWatcher from 'active-keys';
  * keyWatcher.addEventListener('change', () => {
- *   console.log(keyWatcher.activeKeys);
+ *   console.log(Object.keys(keyWatcher.activeKeys));
  * });
  */
 
 import EventTargetShim from 'event-target-shim';
-
-// not sure if this is complete. Likely need to add more over time:
-// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
-const EVENTS_WITH_MODIFIER_KEYS = new Set(`
-touchstart
-touchend
-touchmove
-touchcancel
-
-click
-dblclick
-mousedown
-mouseenter
-mouseleave
-mousemove
-mouseout
-mouseover
-mouseup
-contextmenu
-
-dragstart
-drag
-dragenter
-dragexit
-dragleave
-dragover
-drop
-dragend
-
-wheel
-`.split('\n').filter(Boolean));
-
-const PASSIVE_SUPPORTED = (() => {
-  let passiveSupported = false;
-
-  try {
-    const options = Object.defineProperty({}, 'passive', {
-      get() {
-        passiveSupported = true;
-      }
-    });
-
-    window.addEventListener('passive-support-test', null, options);
-  } catch (error) {
-    // ignore
-  }
-  return passiveSupported;
-})();
 
 /**
  * Tracks which keys are currently held down.
@@ -113,8 +65,13 @@ export class KeyWatcher extends EventTargetShim {
     window.removeEventListener('keydown', this);
     window.removeEventListener('keyup', this);
     window.removeEventListener('blur', this);
+    this._forEachEventWithModifierKeys('removeEventListener');
+  }
+
+  _forEachEventWithModifierKeys(method) {
+    const opts = PASSIVE_SUPPORTED ? {passive: true, capture: true} : true;
     for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
-      window.removeEventListener(eventType, this);
+      window[method](eventType, this, opts);
     }
   }
 
@@ -133,18 +90,12 @@ export class KeyWatcher extends EventTargetShim {
     }
 
     if (this._isListeningForEventsWithModifierKeys !== this._eventModifierKeyIsActive) {
-      const opts = PASSIVE_SUPPORTED ? {passive: true, capture: true} : true;
-
       if (this._isListeningForEventsWithModifierKeys) {
         this._isListeningForEventsWithModifierKeys = false;
-        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
-          window.removeEventListener(eventType, this, opts);
-        }
+        this._forEachEventWithModifierKeys('removeEventListener');
       } else {
         this._isListeningForEventsWithModifierKeys = true;
-        for (const eventType of EVENTS_WITH_MODIFIER_KEYS) {
-          window.addEventListener(eventType, this, opts);
-        }
+        this._forEachEventWithModifierKeys('addEventListener');
       }
     }
 
@@ -221,10 +172,24 @@ export class KeyWatcher extends EventTargetShim {
     return key.match(/^[A-Z][a-zA-Z0-9]+$/); // named keys match this pattern, while unnamed keys cannot (https://www.w3.org/TR/2017/CR-uievents-key-20170601/)
   }
 
-  _removeUnnamedKeys() {
+  _isModifierKey(key) {
+    // these are the keys the spec specifies: https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
+    if (key === 'Shift' || key === 'CapsLock' || key === 'AltGraph') {
+      return true;
+    }
+
+    // These also have impact though.
+    if (key === 'Meta' || key === 'Alt' || key === 'Control') {
+      return true;
+    }
+
+    return false;
+  }
+
+  _removeNonModifierKeys() {
     let removed = false;
     for (const activeKey of Object.keys(this.activeKeys)) {
-      if (this._isNamedKey(activeKey)) continue;
+      if (this._isModifierKey(activeKey)) continue;
       delete this.activeKeys[activeKey];
       removed = true;
     }
@@ -264,24 +229,8 @@ export class KeyWatcher extends EventTargetShim {
     // So lacking a better idea for now, being a bit aggressive...
     // Also handles respected modifier safety.
     if (this._isNamedKey(key)) {
-      changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
+      changed = this._removeNonModifierKeys() || changed; // always do _removeNonModifierKeys()
     }
-
-    // currently redundant:
-    //     // these glyph modifier keys *are* respected, and can cause previously pressed unnamed keys to get "stuck" active
-    //     // so will err on the side of resetting all unnamed keys
-    //     // https://www.w3.org/TR/2017/CR-uievents-key-20170601/#selecting-key-attribute-values
-    //     if (key !== 'Shift' && key !== 'CapsLock' && key !== 'AltGraph') {
-    //       // a similar situation can happen when a Dead key is hit.
-    //       // e.g. on a US Mac keyboard;
-    //       // - down:e, down:Alt [down:Dead], up:e (no event), up:alt [up:Dead] -> e
-    //       // - down:e, down:Alt [down:Dead], up:alt, up:e -> Dead
-    //       if (key !== 'Dead') {
-    //         return [key, changed];
-    //       }
-    //     }
-    //
-    //     changed = this._removeUnnamedKeys() || changed; // always do _removeUnnamedKeys()
 
     // The Dead key can also get stuck, and it's not a real key, so just ignore it.
     // e.g. on a US Mac keyboard;
@@ -304,3 +253,53 @@ export class KeyWatcher extends EventTargetShim {
 }
 
 export default new KeyWatcher();
+
+
+// not sure if this is complete. Likely need to add more over time:
+// (KeyboardEvents skipped because keyup/keydown already handled and should suffice)
+const EVENTS_WITH_MODIFIER_KEYS = new Set(`
+touchstart
+touchend
+touchmove
+touchcancel
+
+click
+dblclick
+mousedown
+mouseenter
+mouseleave
+mousemove
+mouseout
+mouseover
+mouseup
+contextmenu
+
+dragstart
+drag
+dragenter
+dragexit
+dragleave
+dragover
+drop
+dragend
+
+wheel
+`.split('\n').filter(Boolean));
+
+
+const PASSIVE_SUPPORTED = (() => {
+  let passiveSupported = false;
+
+  try {
+    const options = Object.defineProperty({}, 'passive', {
+      get() {
+        passiveSupported = true;
+      }
+    });
+
+    window.addEventListener('passive-support-test', null, options);
+  } catch (error) {
+    // ignore
+  }
+  return passiveSupported;
+})();
