@@ -5,11 +5,12 @@
   "main": "dist/",
   "scripts": {
     "build": "npm run build:docs && npm run build:babel && npm run build:browser",
-    "build:docs": "grep -v 'docs/api/' /Users/chris/active-keys/README.md | sed 's/[(]docs\\//(..\\//' > /tmp/active-key-readme && jsdoc --verbose -d docs/api -c jsdoc.json -R /tmp/active-key-readme -r ./src",
+    "build:docs": "grep -v 'docs/api/' ./README.md | sed 's/[(]docs\\//(..\\//' > /tmp/active-key-readme && jsdoc --verbose -d docs/api -c jsdoc.json -R /tmp/active-key-readme -r ./src",
     "build:babel": "babel ./src --out-dir dist --ignore '**/*.test.js'",
     "build:browser": "browserify -p browserify-prepend-licenses dist/index.js --standalone KeyWatcher -o dist/browser.js",
     "prepublishOnly": "npm run build",
-    "preversion": "npm run build && git diff-index --ignore-space-at-eol --quiet HEAD --",
+    "preversion": "npm run test && npm run build && git diff-index --ignore-space-at-eol --quiet HEAD --",
+    "version": "npm run build && git add -A dist",
     "test": "npm run test:watch -- --single-run",
     "test:watch": "cross-env NODE_ENV=test karma start karma.conf.js",
     "lint": "eslint src"
