@@ -24,6 +24,6 @@ keyWatcher.addEventListener('change', () => {
 
 [Live Example](https://chrisjshull.github.io/active-keys/index.html)
 
-[API Docs and Example Code](https://chrisjshull.github.io/active-keys/docs/index.html)
+[API Docs and Example Code](https://chrisjshull.github.io/active-keys/api/index.html)
 
 ![Demo Recording](docs/demo.gif)
