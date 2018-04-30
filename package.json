@@ -1,6 +1,6 @@
 {
   "name": "active-keys",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Know and listen for which keys the user is currently holding down. Includes React helper.",
   "main": "dist/",
   "scripts": {
