@@ -1,9 +1,3 @@
-<!--
-TODO: update repo description and URL, get pages turned on.
-TODO: replace docs/ URLs with GH pages links
-TOOD: build and coverage badges
--->
-
 # active-keys
 
 Know and listen for which keys the user is currently holding down using standard [KeyboardEvent#key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key) values.
@@ -22,8 +16,8 @@ keyWatcher.addEventListener('change', () => {
 - Requires support for [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) and [KeyboardEvent#key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key).
 - Will err on the side of indicating that a key is inactive.
 
-[Live Example](https://chrisjshull.github.io/active-keys/index.html)
+[Live Example](https://chrisjshull.github.io/active-keys/docs/)
 
-[API Docs and Example Code](https://chrisjshull.github.io/active-keys/api/index.html)
+[API Docs and Example Code](https://chrisjshull.github.io/active-keys/docs/api/)
 
-![Demo Recording](docs/demo.gif)
+![Demo Recording](https://chrisjshull.github.io/active-keys/docs/demo.gif)
